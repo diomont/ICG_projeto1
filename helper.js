@@ -33,18 +33,22 @@ const helper = {
         const ambientLight = new THREE.AmbientLight('rgb(255, 255, 255)', 0.2);
         sceneElements.sceneGraph.add(ambientLight);
 
-        // Add spotlight (with shadows)
-        const spotLight = new THREE.SpotLight('rgb(255, 255, 255)', 0.8, 0, Math.PI/2.5);
-        spotLight.position.set(300, 300, 30);
-        sceneElements.sceneGraph.add(spotLight);
+        // Add sun-like directional lights (with shadows)
+        const spotLightPivot = new THREE.Group();
+        spotLightPivot.name = "lightGroup"
+        sceneElements.sceneGraph.add(spotLightPivot)
+
+        const sun = new THREE.DirectionalLight('rgb(255, 255, 255)', 0.7)//, 0, Math.PI/2.5);
+        sun.position.set(400, 400, 400);  // larger number will make lightGroup rotation have subtler effects
+        spotLightPivot.add(sun);
 
         // Setup shadow properties for the spotlight
-        spotLight.castShadow = true;
-        spotLight.shadow.mapSize.width = 2048;
-        spotLight.shadow.mapSize.height = 2048;
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 2048;
+        sun.shadow.mapSize.height = 2048;
 
         // Give a name to the spot light
-        spotLight.name = "light";
+        sun.name = "sun";
 
 
         // Create renderer (with shadow map)

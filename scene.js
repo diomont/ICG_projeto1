@@ -12,11 +12,13 @@ const sceneElements = {
 // Functions are called
 //  1. Initialize the empty scene
 //  2. Add elements within the scene
-//  3. Animate
+//  3. Initialize GUI
+//  4. Animate
 helper.initEmptyScene(sceneElements);
 // adjust starting camera position
 sceneElements.camera.position.set(100, 50, 100);
 load3DObjects(sceneElements.sceneGraph);
+loadGui(sceneElements.sceneGraph);
 requestAnimationFrame(computeFrame);
 
 // HANDLING EVENTS
@@ -57,35 +59,50 @@ function load3DObjects(sceneGraph) {
     terrain3.translateX(600);
     
 
+    console.log(dat)
 
     const turtle = createTurtle();
     turtle.name = "turtle";
     sceneGraph.add(turtle);
 
-    console.log(turtle.rotation.y);
-
     const backPosition = turtle.getObjectByName("backHelper").position;
 
-
+    // objects on the turtles back, which will move along with it
     const turtleBackGroup = new THREE.Group();
     turtleBackGroup.name = "turtleBackGroup";
     turtleBackGroup.position.copy(backPosition);
     sceneGraph.add(turtleBackGroup);
 
 
-    const house1 = createHouse();
-    //house1.position.copy(backPosition);
-    house1.translateX(-6).translateZ(-8);
-    turtleBackGroup.add(house1);
+    const house = createHouse();
+    house.translateX(12).translateZ(-12);
+    turtleBackGroup.add(house);
+
+    const tower = createTower();
+    tower.translateX(-16).translateZ(8);
+    turtleBackGroup.add(tower);
 
 
     const person1 = createPerson();
-    //person1.position.copy(backPosition);
-    person1.translateX(1).translateZ(2).translateY(2.2);
-    person1.rotateY(-Math.PI/3);
+    person1.translateX(8).translateZ(-5.5).translateY(1.8);
+    person1.rotateY(-Math.PI/2);
     turtleBackGroup.add(person1);
 
+    // put person1 on a wall-leaning pose
+    leanOnWall(person1);
 
+    const person2 = createPerson();
+    person2.translateX(45).translateY(4+ 2.2);
+    turtleBackGroup.add(person2);
+
+    // put person2 in a sitting position
+    sit(person2);
+
+}
+
+function loadGui(sceneGraph) {
+    const gui = new dat.GUI();
+    gui.add(sceneGraph.getObjectByName("lightGroup").rotation, "x", -Math.PI, Math.PI).name("Time of Day").listen();
 }
 
 // Displacement value
@@ -102,17 +119,16 @@ let treesToDestroy = [];
 
 
 function computeFrame(time) {
-    // Can extract an object from the scene Graph from its name
-    //const light = sceneElements.sceneGraph.getObjectByName("light");
 
-    // Apply a small displacement
-    // if (light.position.x >= 10) {
-    // delta *= -1;
-    // } else if (light.position.x <= -10) {
-    //     delta *= -1;
-    // }
-    // light.translateX(delta);
+    const lightPivot = sceneElements.sceneGraph.getObjectByName("lightGroup");
+    lightPivot.rotateX(delta/200);
 
+    if (lightPivot.rotation.x > -Math.PI/2 && lightPivot.rotation.x < Math.PI/2) {
+        let currRotation = Math.abs(lightPivot.rotation.x);
+        lightPivot.getObjectByName("sun").intensity = 0.8*(1 - currRotation/Math.PI*2);
+    }
+    else
+        lightPivot.getObjectByName("sun").intensity = 0.0;
 
     const turtle = sceneElements.sceneGraph.getObjectByName("turtle");
     const turtleBack = sceneElements.sceneGraph.getObjectByName("turtleBackGroup");
@@ -139,6 +155,8 @@ function computeFrame(time) {
     requestAnimationFrame(computeFrame);
 }
 
+
+// ******************* Models *********************
 
 function createTurtle() {
 
@@ -281,11 +299,29 @@ function createHouse() {
     return house;
 }
 
+function createTower() {
+    const tower = new THREE.Group();
+
+    const baseGeometry = new THREE.CylinderGeometry(7, 7, 12, 12);
+    const baseMaterial = new THREE.MeshPhongMaterial({ color: 0x5e5a53 });
+    const baseObject = new THREE.Mesh(baseGeometry, baseMaterial);
+    tower.add(baseObject);
+    baseObject.position.y = 6;
+
+    const roofGeometry = new THREE.ConeGeometry(9, 6, 12);
+    const roofMaterial = new THREE.MeshPhongMaterial({ color: 0x6b2a1c });
+    const roofObject = new THREE.Mesh(roofGeometry, roofMaterial);
+    baseObject.add(roofObject);
+    roofObject.position.y = 9;
+
+    return tower;
+}
+
 function createPerson() {
     const person = new THREE.Group();
 
     ///////
-    //const midHelper = new THREE.AxesHelper(1);
+    const midHelper = new THREE.AxesHelper(1);
     ///////
 
 
@@ -301,7 +337,7 @@ function createPerson() {
     //upperHalf.add(torsoObject);
     person.add(torsoObject);
 
-    torsoObject.scale.x = 0.5;
+    //torsoObject.scale.x = 0.5;
     torsoObject.position.y = 0.8;
 
 
@@ -310,17 +346,18 @@ function createPerson() {
     // ------------- //
     const headGroup = new THREE.Group();
     headGroup.name = "head";
-    headGroup.scale.x = 2;
+    //headGroup.scale.x = 2;
     torsoObject.add(headGroup);
+    //headGroup.add(midHelper.clone());
 
     const leftArmGroup = new THREE.Group();
     leftArmGroup.name = "leftArm";
-    leftArmGroup.scale.x = 2;
+    //leftArmGroup.scale.x = 2;
     torsoObject.add(leftArmGroup);
 
     const rightArmGroup = new THREE.Group();
     rightArmGroup.name = "rightArm";
-    rightArmGroup.scale.x = 2;
+    //rightArmGroup.scale.x = 2;
     torsoObject.add(rightArmGroup);
 
     headGroup.position.y = 1.05;
@@ -356,6 +393,7 @@ function createPerson() {
     upperArmObject.position.z = 0.20;
 
     const lowerArmGroup = new THREE.Group();
+    lowerArmGroup.name = "lowerArm";
     upperArmObject.add(lowerArmGroup);
     lowerArmGroup.position.y = -0.5;
     //lowerArmGroup.add(midHelper.clone());
@@ -365,7 +403,6 @@ function createPerson() {
     const lowerArmObject = new THREE.Mesh(lowerArmGeometry, lowerArmMaterial);
     lowerArmObject.castShadow = true;
     lowerArmObject.receiveShadow = true;
-    lowerArmObject.name = "lowerArm";
 
     lowerArmGroup.add(lowerArmObject);
     lowerArmObject.position.y = -0.4;
@@ -398,6 +435,7 @@ function createPerson() {
     upperLegObject.position.y = -0.45;
 
     const lowerLegGroup = new THREE.Group();
+    lowerLegGroup.name = "lowerLeg";
     upperLegObject.add(lowerLegGroup);
     lowerLegGroup.position.y = -0.55;
     //lowerLegGroup.add(midHelper.clone());
@@ -407,7 +445,6 @@ function createPerson() {
     const lowerLegObject = new THREE.Mesh(lowerLegGeometry, lowerLegMaterial);
     lowerLegObject.castShadow = true;
     lowerLegObject.receiveShadow = true;
-    lowerLegObject.name = "lowerLeg";
 
     lowerLegGroup.add(lowerLegObject);
     lowerLegObject.position.y = -0.45;
@@ -524,8 +561,7 @@ function createTerrain() {
 }
 
 
-
-
+// ******************* Animations *********************
 
 function animateTurtle(turtle, turtleBack, step) {
 
@@ -706,4 +742,66 @@ function collideWithTrees(treeArray) {
         }
     }
 
+}
+
+// ******************* Posing functions *********************
+
+function sit(person) {
+    // get all the limbs
+    const torso = person.getObjectByName("torso");
+    const head = torso.getObjectByName("head");
+    const leftArm = torso.getObjectByName("leftArm");
+    const rightArm = torso.getObjectByName("rightArm");
+    //const lowerLeftArm = leftArm.getObjectByName("upperArm").getObjectByName("lowerArm");
+    //const lowerRightArm = rightArm.getObjectByName("upperArm").getObjectByName("lowerArm");
+    const leftLeg = person.getObjectByName("leftLeg");
+    const rightLeg = person.getObjectByName("rightLeg");
+    const lowerLeftLeg = leftLeg.getObjectByName("upperLeg").getObjectByName("lowerLeg");
+    const lowerRightLeg = rightLeg.getObjectByName("upperLeg").getObjectByName("lowerLeg");
+
+    // lean back and tilt head forward
+    person.rotateZ(Math.PI/8);
+    head.rotateZ(-Math.PI/4);
+
+    // set legs
+    leftLeg.rotateZ(Math.PI/2 + Math.PI/8);
+    rightLeg.rotateZ(Math.PI/2 + Math.PI/8);
+    lowerLeftLeg.rotateZ(-Math.PI/2);
+    lowerRightLeg.rotateZ(-Math.PI/2);
+
+    // put arms back
+    leftArm.rotateZ(-Math.PI/4).rotateX(-Math.PI/16);
+    rightArm.rotateZ(-Math.PI/4).rotateX(Math.PI/16);
+}
+
+function leanOnWall(person) {
+    // get all the limbs
+    const torso = person.getObjectByName("torso");
+    const head = torso.getObjectByName("head");
+    const leftArm = torso.getObjectByName("leftArm");
+    const rightArm = torso.getObjectByName("rightArm");
+    const lowerLeftArm = leftArm.getObjectByName("upperArm").getObjectByName("lowerArm");
+    const lowerRightArm = rightArm.getObjectByName("upperArm").getObjectByName("lowerArm");
+    const leftLeg = person.getObjectByName("leftLeg");
+    const rightLeg = person.getObjectByName("rightLeg");
+    const lowerLeftLeg = leftLeg.getObjectByName("upperLeg").getObjectByName("lowerLeg");
+    const lowerRightLeg = rightLeg.getObjectByName("upperLeg").getObjectByName("lowerLeg");
+
+    // tilt head a bit
+    head.rotateZ(-Math.PI/8);
+
+    // pose legs
+    // supporting leg
+    leftLeg.rotateZ(Math.PI/4).rotateX(Math.PI/16);    
+    lowerLeftLeg.rotateZ(-Math.PI/8);
+    // other legs rests, crossed over supporting leg
+    rightLeg.rotateZ(Math.PI/3).rotateX(-Math.PI/12);  
+    lowerRightLeg.rotateZ(-Math.PI/8);
+
+    // cross arms
+    leftArm.rotateZ(Math.PI/5).rotateX(Math.PI/12);
+    lowerLeftArm.rotateX(Math.PI/3 + Math.PI/8);
+    // right over left
+    rightArm.rotateZ(Math.PI/4 + Math.PI/16).rotateX(-Math.PI/10);
+    lowerRightArm.rotateX(-Math.PI/3 - Math.PI/6).rotateZ(-Math.PI/14);
 }
